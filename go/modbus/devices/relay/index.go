@@ -23,6 +23,8 @@ type relay struct {
 
 type Relay interface {
 	devicesRefreshable.Refreshable
+	Set(index byte, value bool) error
+	SetAll(values [6]bool) error
 	State() State
 	StateChanged() event.EventPublic[Relay, StateChangedArgs]
 }
@@ -130,4 +132,30 @@ func (relay *relay)raiseStateChanged(args StateChangedArgs) {
 
 func (relay *relay)StateChanged()event.EventPublic[Relay, StateChangedArgs]{
 	return relay.stateChanged
+}
+
+func (relay *relay)Set(index byte, value bool) error { 
+	_, err := generic[bool]{relay}.invokeGeneric(func(client modbus.Client) (bool, error) {
+		if value {
+			_, err := client.WriteSingleCoil(uint16(index), 1)
+			return true, err
+		} else {
+			_, err := client.WriteSingleCoil(uint16(index), 0)
+			return true, err
+		}
+	})
+	return err
+}
+
+func (relay *relay)SetAll(values [6]bool) error { 
+	_, err := generic[bool]{relay}.invokeGeneric(func(client modbus.Client) (bool, error) {
+		result := byte(0)
+		for i,v :=range values {
+			if !v { continue; }
+			result = result | 1 << i
+		}
+		_, err := client.WriteMultipleCoils(0, 6, []byte{result})
+		return true, err
+	})
+	return err
 }
