@@ -75,6 +75,21 @@ func (relay *relay) initialize() {
 	if val[1] != relay.slaveId {
 		panic("invalid slave id")
 	}
+	// await cl.writeRegisters(9, [0, 0, 0, 0, 0, 0]);
+    //         await cl.writeRegister(16, 3);
+	_, err = relay.invoke(func(client modbus.Client) ([]byte, error) {
+		return client.WriteMultipleRegisters(9, 6, make([]byte, 12))
+	})
+	if err != nil {
+		panic("unable to update config (buttons 1-6)")
+	}
+
+	_, err = relay.invoke(func(client modbus.Client) ([]byte, error) {
+		return client.WriteSingleRegister(16, 3)
+	})
+	if err != nil {
+		panic("unable to update config (button 0)")
+	}
 
 	manager.Instance().Register(relay)
 }
