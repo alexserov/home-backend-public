@@ -1,11 +1,16 @@
 package relay
 
-type outputs [6]bool
-type inputs [7]bool
-type counters [7]uint16
+type Outputs [6]bool
+type Inputs [7]bool
+type Counters [7]uint16
 
-type state struct {
-	outputs outputs
-	inputs inputs
-	counters counters
+type State struct {
+	Outputs Outputs
+	Inputs Inputs
+	Counters Counters
+}
+
+type StateChangedArgs struct {
+	Old State
+	New State
 }

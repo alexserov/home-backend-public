@@ -6,6 +6,9 @@ import (
 	"serov/home-backend-public/modbus/devices/manager"
 	devicesRefreshable "serov/home-backend-public/modbus/devices/refreshable"
 	modbusQueue "serov/home-backend-public/modbus/queue"
+	event "serov/home-backend-public/utils/event"
+
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/grid-x/modbus"
 )
@@ -14,16 +17,20 @@ var queue = modbusQueue.Instance()
 
 type relay struct {
 	slaveId byte
-	state state
+	state State
+	stateChanged event.EventPrivate[Relay, StateChangedArgs]
 }
 
 type Relay interface {
 	devicesRefreshable.Refreshable
-	State() state
+	State() State
+	StateChanged() event.EventPublic[Relay, StateChangedArgs]
 }
 
 func Create(slaveId byte) Relay {
 	result := &relay{slaveId: slaveId}
+	result.stateChanged = event.Create[Relay, StateChangedArgs](result)
+
 	result.initialize()
 
 	return result
@@ -70,44 +77,57 @@ func (relay *relay) initialize() {
 	manager.Instance().Register(relay)
 }
 
-func (relay *relay) State() state {
+func (relay *relay) State() State {
 	return relay.state;
 }
 
 func (relay *relay) Refresh() {
-	val, err:= generic[state]{relay}.invokeGeneric(func (cl modbus.Client) (state, error)  {
-		newState := relay.State()
+	oldState := relay.State()
+
+	newState, err:= generic[State]{relay}.invokeGeneric(func (cl modbus.Client) (State, error)  {
+		result := relay.State()
 
 		outputs, coilsErr := cl.ReadCoils(0, 6)
 
 		if coilsErr == nil {
 			for i := 0; i<6; i++ {
-				newState.outputs[i] = outputs[0] & (1 << byte(i)) > 0
+				result.Outputs[i] = outputs[0] & (1 << byte(i)) > 0
 			}
 		}
 
 		inputs, inputsErr := cl.ReadDiscreteInputs(0, 8)
 		if inputsErr == nil {
 			for i := 0; i<6; i++ {
-				newState.inputs[i] = inputs[0] & (1 << byte(i)) > 0
+				result.Inputs[i] = inputs[0] & (1 << byte(i)) > 0
 			}
-			newState.inputs[0] = inputs[0] & (1 << 7) > 0
+			result.Inputs[0] = inputs[0] & (1 << 7) > 0
 		}
 
 		counters, countersErr := cl.ReadInputRegisters(32, 8)
 		uCounters := make([]uint16, 8)
 		binary.Read(bytes.NewReader(counters), binary.BigEndian, uCounters)
 		if countersErr == nil {
-			for i, val := range counters[:5] {
-				newState.inputs[i+1] = val>0
+			for i, val := range uCounters[:5] {
+				result.Counters[i+1] = val
 			}
-			newState.inputs[0] = counters[7] > 0
+			result.Counters[0] = uCounters[7]
 		}
 
-		return newState, nil
+		return result, nil
 	})
 
 	if err == nil {
-		relay.state = val
+		if !cmp.Equal(oldState, newState){
+			relay.raiseStateChanged(StateChangedArgs{oldState, newState})
+		}
+		relay.state = newState
 	}
+}
+
+func (relay *relay)raiseStateChanged(args StateChangedArgs) {
+	relay.stateChanged.RaiseEvent(args)
+}
+
+func (relay *relay)StateChanged()event.EventPublic[Relay, StateChangedArgs]{
+	return relay.stateChanged
 }

@@ -7,7 +7,11 @@ import (
 func main() {
 	relay:= modbusrelay.Create(243);
 	
-	relay.State()
+	relay.StateChanged().Add(func(sender modbusrelay.Relay, args modbusrelay.StateChangedArgs) {
+		if args.Old.Counters[0] < args.New.Counters[0] {
+			println("changed")
+		}
+	})
 
 	select {
 	}
