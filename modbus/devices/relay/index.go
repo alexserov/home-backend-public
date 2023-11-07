@@ -92,6 +92,8 @@ func (relay *relay) initialize() {
 		panic("unable to update config (button 0)")
 	}
 
+	relay.Refresh()
+
 	manager.Instance().Register(relay)
 }
 
