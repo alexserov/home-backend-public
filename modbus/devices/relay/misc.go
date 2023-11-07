@@ -7,7 +7,7 @@ type Counters [7]uint16
 type State struct {
 	Outputs Outputs
 	Inputs Inputs
-	Counters Counters
+	Clicks Counters
 }
 
 type StateChangedArgs struct {

@@ -1,7 +1,7 @@
 package manager
 
 import (
-	devicesRefreshable "serov/home-backend-public/modbus/devices/refreshable"
+	"serov/home-backend-public/modbus/devices/device"
 	"sync"
 	"time"
 )
@@ -10,14 +10,16 @@ var once sync.Once
 var instance *manager
 
 type manager struct {
-	items []devicesRefreshable.Refreshable
+	items []device.Device
+	itemIdToItemMap map[byte]device.Device
 	ticker *time.Ticker
 	disposeChannel chan struct{}
 	disposed bool
 }
 
 type Manager interface {
-	Register(item devicesRefreshable.Refreshable)
+	Get(id byte)device.Device
+	Register(item device.Device)
 	Dispose()
 }
 
@@ -31,6 +33,7 @@ func Instance() Manager {
 }
 
 func (manager *manager)initialize() {
+	manager.itemIdToItemMap = make(map[byte]device.Device)
 	manager.ticker = time.NewTicker(200 * time.Millisecond)
 	manager.disposeChannel = make (chan struct{})
 	go func () {
@@ -61,6 +64,12 @@ func (manager *manager)Dispose() {
 
 }
 
-func (manager *manager) Register(item devicesRefreshable.Refreshable) {
+func (manager *manager) Register(item device.Device) {
 	manager.items = append(manager.items, item)
+	manager.itemIdToItemMap[item.Id()] = item
 }
+
+func (manager *manager) Get(id byte) device.Device {
+	return manager.itemIdToItemMap[id];
+}
+

@@ -15,6 +15,7 @@ import (
 
 var queue = modbusQueue.Instance()
 
+
 type relay struct {
 	slaveId byte
 	state State
@@ -120,14 +121,14 @@ func (relay *relay) Refresh() {
 			result.Inputs[0] = inputs[0] & (1 << 7) > 0
 		}
 
-		counters, countersErr := cl.ReadInputRegisters(32, 8)
-		uCounters := make([]uint16, 8)
-		binary.Read(bytes.NewReader(counters), binary.BigEndian, uCounters)
-		if countersErr == nil {
-			for i, val := range uCounters[:5] {
-				result.Counters[i+1] = val
+		clicks, clicksErr := cl.ReadInputRegisters(32, 8)
+		uClicks := make([]uint16, 8)
+		binary.Read(bytes.NewReader(clicks), binary.BigEndian, uClicks)
+		if clicksErr == nil {
+			for i, val := range uClicks[:5] {
+				result.Clicks[i+1] = val
 			}
-			result.Counters[0] = uCounters[7]
+			result.Clicks[0] = uClicks[7]
 		}
 
 		return result, nil
@@ -173,4 +174,8 @@ func (relay *relay)SetAll(values [6]bool) error {
 		return true, err
 	})
 	return err
+}
+
+func (relay *relay)Id() byte {
+	return relay.slaveId
 }
