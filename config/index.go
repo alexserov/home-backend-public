@@ -10,7 +10,7 @@ type AuthConfig struct {
 	Mqtt Mqtt
 }
 type Mqtt struct {
-	Login string `json:"asd"`
+	Login string
 	Password string
 }
 
@@ -25,20 +25,23 @@ type Config struct {
 	Devices []DeviceConfig
 }
 
-type DeviceConfigRaw struct {
-	Id byte
-	Type string
-	Config json.RawMessage
-}
-
-type ConfigRaw struct {
-	Auth AuthConfig
-	Devices []DeviceConfigRaw
-}
-
 var once sync.Once
 var instance Config
 var factories map[string]func()interface{} = make(map[string]func() interface{})
+
+func (c *DeviceConfig) UnmarshalJSON(data []byte) (err error) {
+	var deviceFields map[string]*json.RawMessage
+	json.Unmarshal(data, &deviceFields)
+
+	json.Unmarshal(*deviceFields["Id"], &c.Id)
+	json.Unmarshal(*deviceFields["Type"], &c.Type)
+
+	factory := factories[c.Type]
+	c.Config = factory()
+	json.Unmarshal(*deviceFields["Config"], c.Config)
+
+	return nil
+}
 
 func readConfig() {
 	file, error := os.ReadFile("./private/config.json")
@@ -47,19 +50,7 @@ func readConfig() {
 		panic(error.Error())
 	}
 
-	var rawInstance ConfigRaw
-	instance.Auth = rawInstance.Auth
-
-	json.Unmarshal(file, &rawInstance)
-	for _,deviceRaw := range rawInstance.Devices {
-		factory := factories[deviceRaw.Type]
-		deviceConfig := factory()
-		json.Unmarshal(deviceRaw.Config, deviceConfig)
-		
-		device := DeviceConfig{deviceRaw.Id, deviceRaw.Type, deviceConfig}
-
-		instance.Devices = append(instance.Devices, device)
-	}
+	json.Unmarshal(file, &instance)
 }
 
 func Register(typeKey string, factory func()interface{}) {

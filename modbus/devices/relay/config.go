@@ -1,6 +1,7 @@
 package relay
 
 import (
+	"errors"
 	"serov/home-backend-public/config"
 	"serov/home-backend-public/modbus/devices/manager"
 )
@@ -10,17 +11,52 @@ func RegisterConfigFactory() {
 }
 
 type RelayConfigEventHandler struct {
-	Action string
+	Action RelayEventHanlderAction
 	Target byte
 	Switches []byte
 }
 type RelayConfigEvent struct {
 	Channel byte
-	EventName string
+	EventName RelayEventName
 	Handlers []RelayConfigEventHandler
 }
 type RelayConfig struct {
 	Events []RelayConfigEvent
+}
+
+const (
+	On RelayEventHanlderAction = iota + 1
+	Toggle
+	Off
+)
+type RelayEventHanlderAction uint8
+
+func (a *RelayEventHanlderAction) UnmarshalJSON(data []byte) (err error) {
+	switch string(data) {
+	case `"on"`: *a = On
+	case `"off"`: *a = Off
+	case `"toggle"`: *a = Toggle
+	default: return errors.New("invalid Events.Handlers.Action value")
+	}
+	return nil
+}
+
+const (
+	Click RelayEventName = iota + 1
+	DoubleClick
+	LongClick
+)
+
+type RelayEventName uint8
+
+func (n *RelayEventName) UnmarshalJSON(data []byte) (err error) {
+	switch string(data) {
+		case `"click"`: *n = Click
+		case `"doubleclick"`: *n = DoubleClick
+		case `"longclick"`: *n = LongClick
+		default: return errors.New("invalid Events.EventName value")
+		}
+		return nil
 }
 
 func FromConfig(id byte, config RelayConfig) Relay {
@@ -30,7 +66,7 @@ func FromConfig(id byte, config RelayConfig) Relay {
 		for _, rule := range config.Events {
 			changed := false
 			switch rule.EventName {
-				case "Click": {
+				case Click: {
 					changed = args.Old.Clicks[rule.Channel] != args.New.Clicks[rule.Channel]
 				}
 				default: {
@@ -45,19 +81,19 @@ func FromConfig(id byte, config RelayConfig) Relay {
 			for _, handler := range rule.Handlers {
 				target := manager.Instance().Get(byte(handler.Target)).(Relay)
 				current := target.State().Outputs
-				if handler.Action == "on" {
+				if handler.Action == On {
 					for _, switchIndex := range handler.Switches {
 						current[switchIndex] = true
 					}
 				}
 
-				if handler.Action == "off" {
+				if handler.Action == Off {
 					for _, switchIndex := range handler.Switches {
 						current[switchIndex] = false
 					}
 				}
 
-				if handler.Action == "toggle" {
+				if handler.Action == Toggle {
 					for _, switchIndex := range handler.Switches {
 						current[switchIndex] = !current[switchIndex]
 					}

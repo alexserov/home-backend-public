@@ -70,7 +70,7 @@ func (relay *relay) initialize() {
 		return cl.ReadHoldingRegisters(128, 1)
 	})
 	if err != nil {
-		panic("has error")
+		panic("Cannot Read Slave ID")
 	}
 
 	if val[1] != relay.slaveId {
