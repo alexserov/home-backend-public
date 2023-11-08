@@ -11,6 +11,6 @@ func RegisterConfigFactory() {
 
 func Initialize() {
 	for _, device := range config.Get().Devices {
-		relay.FromConfig(device.Id, *(device.Config).(*relay.RelayConfig))
+		relay.FromConfig(device.Id, device.Type, *(device.Config).(*relay.RelayConfig))
 	}
 }

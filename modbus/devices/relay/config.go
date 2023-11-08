@@ -4,10 +4,11 @@ import (
 	"errors"
 	"serov/home-backend-public/config"
 	"serov/home-backend-public/modbus/devices/manager"
+	"serov/home-backend-public/mqtt"
 )
 
 func RegisterConfigFactory() {
-	config.Register("Modbus6chRelay", func() interface{} { return new(RelayConfig)})
+	config.Register("modbus6chrelay", func() interface{} { return new(RelayConfig)})
 }
 
 type RelayConfigEventHandler struct {
@@ -59,8 +60,8 @@ func (n *RelayEventName) UnmarshalJSON(data []byte) (err error) {
 		return nil
 }
 
-func FromConfig(id byte, config RelayConfig) Relay {
-	result := Create(id)
+func FromConfig(id byte, relayType string, config RelayConfig) Relay {
+	result := Create(id, relayType)
 
 	result.StateChanged().Add(func(sender Relay, args StateChangedArgs) {
 		for _, rule := range config.Events {
@@ -106,5 +107,7 @@ func FromConfig(id byte, config RelayConfig) Relay {
 		}
 	})
 
+	mqtt.Instance().Register(result);
+	
 	return result
 }
