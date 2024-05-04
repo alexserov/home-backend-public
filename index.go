@@ -20,24 +20,34 @@ func onRelayStateChanged(sender modbusrelay.Relay, args modbusrelay.StateChanged
 
 	for switchNum, switchValue := range args.New.Outputs {
 		if args.Old.Outputs[switchNum] != switchValue {
-			relayRecord, err := dataaccess.GetDeviceByRelaySwitchAndUser(context.Background(), zap.L(), userId, id, uint64(switchNum+1))
-			if err != nil {
-				zap.L().Error("got error when trying to access ydb", zap.Error(err))
-				continue
-			}
-			dataaccess.SetDeviceOnByUid(context.Background(), zap.L(), relayRecord.Id, switchValue)
+			updateRelaySwitchDb(userId, id, switchNum, switchValue)
 		}
 	}
+}
+
+func updateRelaySwitchDb(userId uint64, relayId uint64, switchNum int, switchValue bool) {
+	relayRecord, err := dataaccess.GetDeviceByRelaySwitchAndUser(context.Background(), zap.L(), userId, relayId, uint64(switchNum+1))
+	if err != nil {
+		zap.L().Error("got error when trying to access ydb", zap.Error(err))
+		return
+	}
+	dataaccess.SetDeviceOnByUid(context.Background(), zap.L(), relayRecord.Id, switchValue)
 }
 
 func initializeRelay(id byte) {
 	var relay = modbusrelay.Create(id, "modbus6chrelay")
 	relay.StateChanged().Add(onRelayStateChanged)
 	relays[uint64(id)] = relay
+	for num, val := range relay.State().Outputs {
+		updateRelaySwitchDb(1, uint64(id), num, val)
+	}
 }
 
 func initializeRelays() {
 	initializeRelay(243)
+	initializeRelay(61)
+	initializeRelay(52)
+	initializeRelay(53)
 }
 
 func fetchAndProcessCommands() {
