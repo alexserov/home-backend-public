@@ -1,9 +1,8 @@
 package queue
 
 import (
-	"time"
-	"sync"
 	"github.com/grid-x/modbus"
+	"sync"
 )
 
 var instance *queue
@@ -15,24 +14,34 @@ type Queue interface {
 }
 
 func Instance() Queue {
-	once.Do(func ()  {
+	once.Do(func() {
 		instance = &queue{}
 		instance.initialize()
 	})
 	return instance
 }
 
+func rtuInitialize() *modbus.RTUClientHandler {
+	var handler = modbus.NewRTUClientHandler("/dev/ttyACM0")
+	handler.BaudRate = 9600
+	handler.DataBits = 8
+	handler.StopBits = 2
+	handler.Parity = "N"
+
+	return handler
+}
+func tcpInitialize() *modbus.TCPClientHandler {
+	var handler = modbus.NewTCPClientHandler("localhost:5020")
+
+	return handler
+}
+
 func (q *queue) initialize() Queue {
-	q.clientHandler = modbus.NewRTUClientHandler("/dev/ttyACM0")
-	q.clientHandler.BaudRate = 9600
-	q.clientHandler.DataBits = 8
-	q.clientHandler.StopBits = 2
-	q.clientHandler.Parity = "N"
-	q.clientHandler.Timeout = time.Millisecond * 1000
+	q.clientHandler = tcpInitialize()
 
 	q.clientHandler.Connect()
 
-	q.client = modbus.NewClient(q.clientHandler);
+	q.client = modbus.NewClient(q.clientHandler)
 
 	return q
 }
@@ -62,11 +71,11 @@ func (q *queue) Enqueue(slaveId byte, item callback) Queue {
 func (q *queue) ProcessItems() Queue {
 	q.assertNotDestroyed()
 
-	if(q.processing) {
+	if q.processing {
 		return q
 	}
 	q.processing = true
-	for len(q.actions)	> 0 {
+	for len(q.actions) > 0 {
 		meta := q.actions[0]
 
 		q.clientHandler.SetSlave(meta.slaveId)

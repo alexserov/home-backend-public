@@ -2,7 +2,6 @@ package relay
 
 import (
 	modbusDevice "serov/home-backend-public/modbus/devices/device"
-	mqttDevice "serov/home-backend-public/mqtt/device"
 	event "serov/home-backend-public/utils/event"
 )
 
@@ -16,7 +15,6 @@ type relay struct {
 
 type Relay interface {
 	modbusDevice.Device
-	mqttDevice.Device
 	Set(index byte, value bool) error
 	SetAll(values [6]bool) error
 	State() State

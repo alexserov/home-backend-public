@@ -7,6 +7,7 @@ import (
 	modbusQueue "serov/home-backend-public/modbus/queue"
 
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/zap"
 
 	"github.com/grid-x/modbus"
 )
@@ -44,6 +45,7 @@ func (relay *relay) modbusInitialize() {
 		return cl.ReadHoldingRegisters(128, 1)
 	})
 	if err != nil {
+		zap.L().Error("Cannot read slave id", zap.Error(err))
 		panic("Cannot Read Slave ID")
 	}
 

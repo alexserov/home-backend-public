@@ -13,7 +13,7 @@ type queueAction struct {
 
 type queue struct {
 	destroyed bool
-	clientHandler *modbus.RTUClientHandler
+	clientHandler modbus.ClientHandler
 	client modbus.Client
 	actions []queueAction
 	processing bool
