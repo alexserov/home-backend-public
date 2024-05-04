@@ -12,6 +12,8 @@ func onRelayStateChanged(sender modbusrelay.Relay, args modbusrelay.StateChanged
 	id := uint64(sender.Id())
 	userId := uint64(1)
 
+	zap.L().Debug("state changed", zap.Uint64("switch_id", id), zap.Any("state", args))
+
 	for switchNum, switchValue := range args.New.Inputs {
 		if args.Old.Inputs[switchNum] != switchValue {
 			relayRecord, err := dataaccess.GetDeviceByRelaySwitchAndUser(context.Background(), zap.L(), userId, id, uint64(switchNum))
@@ -36,6 +38,8 @@ func main() {
 	logger, _ := config.Build()
 
 	zap.ReplaceGlobals(logger)
+
+	zap.L().Debug("start")
 
 	initializeRelays()
 
