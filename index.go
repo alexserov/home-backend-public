@@ -14,8 +14,8 @@ func onRelayStateChanged(sender modbusrelay.Relay, args modbusrelay.StateChanged
 
 	zap.L().Debug("state changed", zap.Uint64("switch_id", id), zap.Any("state", args))
 
-	for switchNum, switchValue := range args.New.Inputs {
-		if args.Old.Inputs[switchNum] != switchValue {
+	for switchNum, switchValue := range args.New.Outputs {
+		if args.Old.Outputs[switchNum] != switchValue {
 			relayRecord, err := dataaccess.GetDeviceByRelaySwitchAndUser(context.Background(), zap.L(), userId, id, uint64(switchNum))
 			if err != nil {
 				zap.L().Error("got error when trying to access ydb", zap.Error(err))
