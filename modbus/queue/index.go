@@ -37,7 +37,7 @@ func tcpInitialize() *modbus.TCPClientHandler {
 }
 
 func (q *queue) initialize() Queue {
-	q.clientHandler = tcpInitialize()
+	q.clientHandler = rtuInitialize()
 
 	q.clientHandler.Connect()
 
