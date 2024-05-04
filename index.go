@@ -75,7 +75,7 @@ func fetchAndProcessCommands() {
 		}
 
 		zap.L().Debug("new value", zap.Any("relay id", relayItem.Id()), zap.Any("switch", device.SwitchId), zap.Any("value", newValue))
-		relayItem.Set(byte(device.SwitchId+1), newValue)
+		relayItem.Set(byte(device.SwitchId), newValue)
 	}
 }
 
