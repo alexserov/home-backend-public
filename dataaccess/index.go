@@ -217,10 +217,8 @@ func SetDeviceOnByUid(ctx context.Context, logger *zap.Logger, uid uint64, value
 			return s.Execute(c, tx,
 				`
 				DECLARE $uid as Uint64;
-				DECLARE $value as Bool
-				UPDATE home_devices
-				SET on = value
-				WHERE id = $uid;
+				DECLARE $value as Bool;
+				UPDATE home_devices SET on = value WHERE id = $uid;
 				`,
 				table.NewQueryParameters(
 					table.ValueParam("$uid", types.Uint64Value(uid)),
