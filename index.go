@@ -39,7 +39,7 @@ func main() {
 
 	initializeRelays()
 
-	switch {
-		
+	select {
+
 	}
 }
