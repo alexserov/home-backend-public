@@ -193,7 +193,7 @@ func GetDeviceByRelaySwitchAndUser(ctx context.Context, logger *zap.Logger, user
 				DECLARE $relayId as Uint64;
 				DECLARE $switchId as Uint64;
 
-				SELECT * from home_devices where user_id = $uid and relay_id = $relayId and switch_id = $switchId;
+				SELECT * from home_devices where user_id = $userId and relay_id = $relayId and switch_id = $switchId;
 				`,
 				table.NewQueryParameters(
 					table.ValueParam("$userId", types.Uint64Value(userId)),
