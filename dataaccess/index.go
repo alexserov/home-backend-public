@@ -235,3 +235,54 @@ func SetDeviceOnByUid(ctx context.Context, logger *zap.Logger, uid uint64, value
 
 	return nil
 }
+
+func DeleteCommand(ctx context.Context, logger *zap.Logger, id uint64) error {
+	go requestInDb[interface{}](
+		ctx,
+		logger,
+		func(s table.Session, tx *table.TransactionControl, c context.Context) (table.Transaction, result.Result, error) {
+			return s.Execute(c, tx,
+				`
+				DECLARE $id as Uint64;
+				DELETE FROM home_device_tasks WHERE id = $id;
+				`,
+				table.NewQueryParameters(
+					table.ValueParam("$id", types.Uint64Value(id)),
+				),
+			)
+		},
+		func(res result.Result, dbctx context.Context, resultChannel chan interface{}) error {
+			return nil
+		},
+		nil,
+	)
+
+	return nil
+}
+
+func ListCommandsForUser(ctx context.Context, logger *zap.Logger, uid uint64) (*[]homeDeviceTasksDao, error) {
+	resultChannel := make(chan homeDeviceTasksDao)
+	go find(
+		ctx,
+		logger,
+		resultChannel,
+		func(s table.Session, tx *table.TransactionControl, c context.Context) (table.Transaction, result.Result, error) {
+			return s.Execute(c, tx,
+				`
+				DECLARE $uid as Uint64;
+				SELECT * from home_device_tasks where user_id = $uid;
+				`,
+				table.NewQueryParameters(
+					table.ValueParam("$uid", types.Uint64Value(uid)),
+				),
+			)
+		},
+	)
+
+	result := []homeDeviceTasksDao{}
+	for resultItem := range resultChannel {
+		result = append(result, resultItem)
+	}
+
+	return &result, nil
+}
