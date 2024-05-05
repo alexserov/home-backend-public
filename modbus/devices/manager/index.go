@@ -61,6 +61,7 @@ func (manager *manager)processActions() {
 
 func (manager *manager)Dispose() {
 	manager.disposeChannel <- struct{}{}
+	close(manager.disposeChannel)
 
 }
 

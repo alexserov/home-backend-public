@@ -1,6 +1,8 @@
 package queue
 
 import (
+	"sync"
+
 	"github.com/grid-x/modbus"
 )
 
@@ -17,4 +19,5 @@ type queue struct {
 	client modbus.Client
 	actions []queueAction
 	processing bool
+	processingMutex sync.Mutex
 }

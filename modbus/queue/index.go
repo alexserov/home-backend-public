@@ -1,8 +1,10 @@
 package queue
 
 import (
-	"github.com/grid-x/modbus"
 	"sync"
+
+	"github.com/grid-x/modbus"
+	"go.uber.org/zap"
 )
 
 var instance *queue
@@ -74,13 +76,22 @@ func (q *queue) ProcessItems() Queue {
 	if q.processing {
 		return q
 	}
+	
+	if !q.processingMutex.TryLock() {
+		zap.L().Debug("queue already locked")
+		return q
+	}
+	if q.processing {
+		return q
+	}
+	defer q.processingMutex.Unlock()
 	q.processing = true
 	for len(q.actions) > 0 {
 		meta := q.actions[0]
+		q.actions = q.actions[1:]
 
 		q.clientHandler.SetSlave(meta.slaveId)
 		meta.action(q.client)
-		q.actions = q.actions[1:]
 	}
 	q.processing = false
 
