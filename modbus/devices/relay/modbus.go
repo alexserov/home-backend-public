@@ -3,8 +3,6 @@ package relay
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"math/rand"
 	"serov/home-backend-public/modbus/devices/manager"
 	modbusQueue "serov/home-backend-public/modbus/queue"
 
