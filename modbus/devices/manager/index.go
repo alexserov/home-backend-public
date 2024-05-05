@@ -34,7 +34,7 @@ func Instance() Manager {
 
 func (manager *manager)initialize() {
 	manager.itemIdToItemMap = make(map[byte]device.Device)
-	manager.ticker = time.NewTicker(200 * time.Millisecond)
+	manager.ticker = time.NewTicker(400 * time.Millisecond)
 	manager.disposeChannel = make (chan struct{})
 	go func () {
 		for {
