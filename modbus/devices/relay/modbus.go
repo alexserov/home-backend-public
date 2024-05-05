@@ -3,6 +3,8 @@ package relay
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"math/rand"
 	"serov/home-backend-public/modbus/devices/manager"
 	modbusQueue "serov/home-backend-public/modbus/queue"
 
@@ -19,20 +21,39 @@ type generic[V any] struct {
 }
 
 func (generic generic[V]) invokeGeneric(action func(client modbus.Client) (V, error)) (V, error){
+	rnd := rand.Uint64()
 	cResults := make (chan V)
 	cErr := make(chan error)
+
+	zap.L().Debug("begin invoke", 
+		zap.Uint64("key", rnd),
+		zap.Any("result chan ptr", fmt.Sprintf("%p", &cResults)),
+		zap.Any("result err ptr", fmt.Sprintf("%p", &cErr)),
+	)
 
 	queue.Enqueue(generic.relay.slaveId, func (client modbus.Client)  {
 		defer close(cResults)
 		defer close(cErr)
 
 		r,e := action(client)
+
+		zap.L().Debug("after invoke", 
+			zap.Uint64("key", rnd),
+			zap.Any("result chan ptr", fmt.Sprintf("%p", &cResults)),
+			zap.Any("result err ptr", fmt.Sprintf("%p", &cErr)),
+		)	
 		cResults <- r
 		cErr <- e
 	})
 
 	results := <-cResults
 	err :=  <-cErr
+
+	zap.L().Debug("return value", 
+	zap.Uint64("key", rnd),
+	zap.Any("result chan ptr", fmt.Sprintf("%p", &cResults)),
+	zap.Any("result err ptr", fmt.Sprintf("%p", &cErr)),
+)	
 
 	return results, err
 }
