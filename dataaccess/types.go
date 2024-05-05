@@ -41,7 +41,7 @@ type homeDevicesDao struct {
 	Type        string `sql:"type"`
 }
 
-type homeDeviceTasksDao struct {
+type HomeDeviceTasksDao struct {
 	Id         uint64    `sql:"id"`
 	DeviceId   uint64    `sql:"device_id"`
 	Capability string    `sql:"capability"`

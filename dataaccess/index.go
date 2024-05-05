@@ -15,7 +15,7 @@ import (
 )
 
 func getCredentials(ctx context.Context) ydb.Option {
-		return yc.WithServiceAccountKeyFileCredentials("/var/home-backend/authorized_key.json")
+	return yc.WithServiceAccountKeyFileCredentials("/var/home-backend/authorized_key.json")
 }
 
 func requestInDb[TResult any](
@@ -209,7 +209,7 @@ func GetDeviceByRelaySwitchAndUser(ctx context.Context, logger *zap.Logger, user
 	return &result, nil
 }
 
-func SetDeviceOnByUid(ctx context.Context, logger *zap.Logger, uid uint64, value bool) (error) {
+func SetDeviceOnByUid(ctx context.Context, logger *zap.Logger, uid uint64, value bool) error {
 	go requestInDb[interface{}](
 		ctx,
 		logger,
@@ -223,7 +223,6 @@ func SetDeviceOnByUid(ctx context.Context, logger *zap.Logger, uid uint64, value
 				table.NewQueryParameters(
 					table.ValueParam("$uid", types.Uint64Value(uid)),
 					table.ValueParam("$value", types.BoolValue(value)),
-
 				),
 			)
 		},
@@ -260,8 +259,8 @@ func DeleteCommand(ctx context.Context, logger *zap.Logger, id uint64) error {
 	return nil
 }
 
-func ListCommandsForUser(ctx context.Context, logger *zap.Logger, uid uint64) (*[]homeDeviceTasksDao, error) {
-	resultChannel := make(chan homeDeviceTasksDao)
+func ListCommandsForUser(ctx context.Context, logger *zap.Logger, uid uint64) (*[]HomeDeviceTasksDao, error) {
+	resultChannel := make(chan HomeDeviceTasksDao)
 	go find(
 		ctx,
 		logger,
@@ -279,7 +278,7 @@ func ListCommandsForUser(ctx context.Context, logger *zap.Logger, uid uint64) (*
 		},
 	)
 
-	result := []homeDeviceTasksDao{}
+	result := []HomeDeviceTasksDao{}
 	for resultItem := range resultChannel {
 		result = append(result, resultItem)
 	}

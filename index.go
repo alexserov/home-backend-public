@@ -57,35 +57,38 @@ func fetchAndProcessCommands() {
 	}
 
 	for _, command := range *commands {
-		zap.L().Debug("got command", zap.Any("command", command))
-		dataaccess.DeleteCommand(context.Background(), zap.L(), command.Id)
+		go func(cmd *dataaccess.HomeDeviceTasksDao) {
+			zap.L().Debug("got command", zap.Any("command", cmd))
+			dataaccess.DeleteCommand(context.Background(), zap.L(), cmd.Id)
 
-		device, err := dataaccess.GetDeviceByUid(context.Background(), zap.L(), command.DeviceId)
+			device, err := dataaccess.GetDeviceByUid(context.Background(), zap.L(), cmd.DeviceId)
 
-		if err != nil {
-			zap.L().Error("unable to fetch device for command (got error)", zap.Error(err), zap.Any("command", command))
-		}
-		if device == nil {
-			zap.L().Error("unable to fetch device for command", zap.Any("command", command))
-			continue
-		}
+			if err != nil {
+				zap.L().Error("unable to fetch device for command (got error)", zap.Error(err), zap.Any("command", cmd))
+			}
+			if device == nil {
+				zap.L().Error("unable to fetch device for command", zap.Any("command", cmd))
+				return
+			}
 
-		relayItem := relays[device.RelayId]
+			relayItem := relays[device.RelayId]
 
-		if relayItem == nil {
-			zap.L().Error("no relay for device found", zap.Any("device", device))
-			continue
-		}
+			if relayItem == nil {
+				zap.L().Error("no relay for device found", zap.Any("device", device))
+				return
+			}
 
-		newValue, err := strconv.ParseBool(command.Value)
+			newValue, err := strconv.ParseBool(cmd.Value)
 
-		if err != nil {
-			zap.L().Error("value is not bool", zap.Any("command", command))
-			continue
-		}
+			if err != nil {
+				zap.L().Error("value is not bool", zap.Any("command", cmd))
+				return
+			}
 
-		zap.L().Debug("new value", zap.Any("relay id", relayItem.Id()), zap.Any("switch", device.SwitchId), zap.Any("value", newValue))
-		relayItem.Set(byte(device.SwitchId -1), newValue)
+			zap.L().Debug("new value", zap.Any("relay id", relayItem.Id()), zap.Any("switch", device.SwitchId), zap.Any("value", newValue))
+			relayItem.Set(byte(device.SwitchId-1), newValue)
+		}(&command)
+
 	}
 }
 
