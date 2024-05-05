@@ -20,12 +20,12 @@ type generic[V any] struct {
 
 func (generic generic[V]) invokeGeneric(action func(client modbus.Client) (V, error)) (V, error){
 	cResults := make (chan V)
-	defer close(cResults)
-
 	cErr := make(chan error)
-	defer close(cErr)
 
 	queue.Enqueue(generic.relay.slaveId, func (client modbus.Client)  {
+		defer close(cResults)
+		defer close(cErr)
+
 		r,e := action(client)
 		cResults <- r
 		cErr <- e
