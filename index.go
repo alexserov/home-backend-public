@@ -64,9 +64,7 @@ func updateRelaySwitchDb(userId uint64, relayId uint64, switchNum int, switchVal
 		panic("build-request")
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", fmt.Sprintf("OAuth %v", dialogsOauthKey))
-
-	zap.L().Debug("updateRelaySwitchDb: request", zap.Any("request", req))
+	req.Header.Add("Authorization", fmt.Sprintf("OAuth %v", *dialogsOauthKey))
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -208,7 +206,7 @@ func main() {
 
 	ensureInternetConnection()
 	getSecrets()
-	
+	updateRelaySwitchDb(1, 61, 4, false)
 
 	initializeRelays()
 	listenCommands()
