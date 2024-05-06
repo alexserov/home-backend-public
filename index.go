@@ -66,6 +66,8 @@ func updateRelaySwitchDb(userId uint64, relayId uint64, switchNum int, switchVal
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("OAuth %v", dialogsOauthKey))
 
+	zap.L().Debug("updateRelaySwitchDb: request", zap.Any("request", req))
+
 	resp, err := client.Do(req)
 	if err != nil {
 		zap.L().Error("updateRelaySwitchDb: unable to execute request", zap.Error(err))
