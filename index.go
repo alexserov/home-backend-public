@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"serov/home-backend-public/dataaccess"
 	modbusrelay "serov/home-backend-public/modbus/devices/relay"
 	"strconv"
@@ -104,6 +105,30 @@ func listenCommands() {
 	}()
 }
 
+func ensureInternetConnection() {
+	ok := false
+	for i := 0; i < 20; i++ {
+		res, err := http.Get("https://ya.ru")
+
+		if err != nil {
+			zap.L().Error("got error when trying to check internet connection", zap.Error(err))
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if res.StatusCode >= 400 {
+			zap.L().Error("bad status when trying to check internet connection", zap.Any("response", res))
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		ok = true
+		break
+	}
+	if !ok {
+		panic("unable to ensure internet connection")
+	}
+	zap.L().Debug("got internet connection!")
+}
+
 func main() {
 	config := zap.NewProductionConfig()
 	config.DisableCaller = true
@@ -113,6 +138,8 @@ func main() {
 	zap.ReplaceGlobals(logger)
 
 	zap.L().Debug("start")
+
+	ensureInternetConnection()
 
 	initializeRelays()
 	listenCommands()
