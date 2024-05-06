@@ -18,7 +18,7 @@ type generic[V any] struct {
 	relay *relay
 }
 
-func (generic generic[V]) invokeGeneric(action func(client modbus.Client) (V, error)) (V, error){
+func (generic generic[V]) invokeGeneric(fast bool, action func(client modbus.Client) (V, error)) (V, error){
 	// rnd := rand.Uint64()
 	cResults := make (chan V)
 	cErr := make(chan error)
@@ -29,7 +29,7 @@ func (generic generic[V]) invokeGeneric(action func(client modbus.Client) (V, er
 	// 	zap.Any("result err ptr", fmt.Sprintf("%p", &cErr)),
 	// )
 
-	queue.Enqueue(generic.relay.slaveId, func (client modbus.Client)  {
+	queue.Enqueue(fast, generic.relay.slaveId, func (client modbus.Client)  {
 		defer close(cResults)
 		defer close(cErr)
 
@@ -55,12 +55,12 @@ func (generic generic[V]) invokeGeneric(action func(client modbus.Client) (V, er
 
 	return results, err
 }
-func (relay *relay) invoke(action func(client modbus.Client) ([] byte, error)) ([] byte, error){
-	return generic[[]byte]{relay}.invokeGeneric(action)
+func (relay *relay) invoke(fast bool, action func(client modbus.Client) ([] byte, error)) ([] byte, error){
+	return generic[[]byte]{relay}.invokeGeneric(fast, action)
 }
 
 func (relay *relay) modbusInitialize() {
-	val, err:= relay.invoke(func (cl modbus.Client) ([]byte, error)  {
+	val, err:= relay.invoke(false, func (cl modbus.Client) ([]byte, error)  {
 		return cl.ReadHoldingRegisters(128, 1)
 	})
 	if err != nil {
@@ -73,14 +73,14 @@ func (relay *relay) modbusInitialize() {
 	}
 	// await cl.writeRegisters(9, [0, 0, 0, 0, 0, 0]);
     //         await cl.writeRegister(16, 3);
-	_, err = relay.invoke(func(client modbus.Client) ([]byte, error) {
+	_, err = relay.invoke(false, func(client modbus.Client) ([]byte, error) {
 		return client.WriteMultipleRegisters(9, 6, make([]byte, 12))
 	})
 	if err != nil {
 		panic("unable to update config (buttons 1-6)")
 	}
 
-	_, err = relay.invoke(func(client modbus.Client) ([]byte, error) {
+	_, err = relay.invoke(false, func(client modbus.Client) ([]byte, error) {
 		return client.WriteSingleRegister(16, 3)
 	})
 	if err != nil {
@@ -95,7 +95,7 @@ func (relay *relay) modbusInitialize() {
 func (relay *relay) Refresh() {
 	oldState := relay.State()
 
-	newState, err:= generic[State]{relay}.invokeGeneric(func (cl modbus.Client) (State, error)  {
+	newState, err:= generic[State]{relay}.invokeGeneric(false, func (cl modbus.Client) (State, error)  {
 		result := relay.State()
 
 		outputs, coilsErr := cl.ReadCoils(0, 6)
@@ -136,7 +136,7 @@ func (relay *relay) Refresh() {
 }
 
 func (relay *relay)Set(index byte, value bool) error { 
-	_, err := generic[bool]{relay}.invokeGeneric(func(client modbus.Client) (bool, error) {
+	_, err := generic[bool]{relay}.invokeGeneric(true, func(client modbus.Client) (bool, error) {
 		if value {
 			_, err := client.WriteSingleCoil(uint16(index), 0xff00)
 			return true, err
@@ -149,7 +149,7 @@ func (relay *relay)Set(index byte, value bool) error {
 }
 
 func (relay *relay)SetAll(values [6]bool) error { 
-	_, err := generic[bool]{relay}.invokeGeneric(func(client modbus.Client) (bool, error) {
+	_, err := generic[bool]{relay}.invokeGeneric(true, func(client modbus.Client) (bool, error) {
 		result := byte(0)
 		for i,v :=range values {
 			if !v { continue; }

@@ -11,7 +11,7 @@ var instance *queue
 var once sync.Once
 
 type Queue interface {
-	Enqueue(slaveId byte, item callback) Queue
+	Enqueue(fast bool, slaveId byte, item callback) Queue
 	Destroy() Queue
 }
 
@@ -62,10 +62,15 @@ func (q *queue) Destroy() Queue {
 	return q
 }
 
-func (q *queue) Enqueue(slaveId byte, item callback) Queue {
+func (q *queue) Enqueue(fast bool, slaveId byte, item callback) Queue {
 	q.assertNotDestroyed()
 
-	q.actions = append(q.actions, queueAction{slaveId, item})
+	if fast {
+		q.actionsFast = append(q.actionsFast, queueAction{slaveId, item})
+	} else {
+	q.actionsSlow = append(q.actionsSlow, queueAction{slaveId, item})
+
+	}
 	go q.ProcessItems()
 	return q
 }
@@ -86,9 +91,16 @@ func (q *queue) ProcessItems() Queue {
 	}
 	defer q.processingMutex.Unlock()
 	q.processing = true
-	for len(q.actions) > 0 {
-		meta := q.actions[0]
-		q.actions = q.actions[1:]
+	for len(q.actionsFast) > 0 {
+		meta := q.actionsFast[0]
+		q.actionsFast = q.actionsFast[1:]
+
+		q.clientHandler.SetSlave(meta.slaveId)
+		meta.action(q.client)
+	}
+	for len(q.actionsSlow) > 0 {
+		meta := q.actionsSlow[0]
+		q.actionsSlow = q.actionsSlow[1:]
 
 		q.clientHandler.SetSlave(meta.slaveId)
 		meta.action(q.client)

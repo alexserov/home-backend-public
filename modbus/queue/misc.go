@@ -17,7 +17,8 @@ type queue struct {
 	destroyed bool
 	clientHandler modbus.ClientHandler
 	client modbus.Client
-	actions []queueAction
+	actionsSlow []queueAction
+	actionsFast []queueAction
 	processing bool
 	processingMutex sync.Mutex
 }
