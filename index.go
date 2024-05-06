@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"serov/home-backend-public/dataaccess"
 	modbusrelay "serov/home-backend-public/modbus/devices/relay"
@@ -12,6 +15,8 @@ import (
 )
 
 var relays = map[uint64]modbusrelay.Relay{}
+var dialogId *string = nil
+var dialogsOauthKey * string = nil
 
 func onRelayStateChanged(sender modbusrelay.Relay, args modbusrelay.StateChangedArgs) {
 	id := uint64(sender.Id())
@@ -33,6 +38,48 @@ func updateRelaySwitchDb(userId uint64, relayId uint64, switchNum int, switchVal
 		return
 	}
 	dataaccess.SetDeviceOnByUid(context.Background(), zap.L(), relayRecord.Id, switchValue)
+
+	client := &http.Client{}
+	payload := []byte(fmt.Sprintf(`{
+		"ts": %v,
+		"payload": {
+			"user_id": "%v",
+			"devices": [{
+				"id": "%v",
+				"capabilities": [
+					{
+					   "type": "devices.capabilities.on_off",
+					   "state": {
+						 "instance": "on",
+						 "value": %v
+					   }
+					}
+				  ]
+			}]
+		}
+	}`, time.Now().Unix(), userId, relayRecord.Id, switchValue))
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://dialogs.yandex.net/api/v1/skills/%v/callback/state", *dialogId), bytes.NewBuffer(payload))
+	if err != nil {
+		zap.L().Error("updateRelaySwitchDb: unable to build request", zap.Error(err))
+		panic("build-request")
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", fmt.Sprintf("OAuth %v", dialogsOauthKey))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		zap.L().Error("updateRelaySwitchDb: unable to execute request", zap.Error(err))
+		panic("execute-request")
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		zap.L().Error("updateRelaySwitchDb: unable to read response", zap.Error(err))
+		return
+	}
+
+	zap.L().Debug("updateRelaySwitchDb: response body", zap.String("body", string(body)))
 }
 
 func initializeRelay(id byte) {
@@ -129,6 +176,24 @@ func ensureInternetConnection() {
 	zap.L().Debug("got internet connection!")
 }
 
+func getSecrets() {
+	dialogIdLocal, err := dataaccess.GetSecret(context.Background(), zap.L(), "dialog-id")
+
+	if err != nil {
+		zap.L().Error("unable to get dialogId", zap.Error(err))
+		panic("dialog-id")
+	}
+	dialogId = &dialogIdLocal
+
+	dialogsOauthKeyLocal, err := dataaccess.GetSecret(context.Background(), zap.L(), "dialogs-oauth-key")
+
+	if err != nil {
+		zap.L().Error("unable to get dialogsOauthKey", zap.Error(err))
+		panic("dialogs-oauth-key")
+	}
+	dialogsOauthKey = &dialogsOauthKeyLocal
+}
+
 func main() {
 	config := zap.NewProductionConfig()
 	config.DisableCaller = true
@@ -140,6 +205,8 @@ func main() {
 	zap.L().Debug("start")
 
 	ensureInternetConnection()
+	getSecrets()
+	
 
 	initializeRelays()
 	listenCommands()

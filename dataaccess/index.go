@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
 
@@ -284,4 +285,33 @@ func ListCommandsForUser(ctx context.Context, logger *zap.Logger, uid uint64) (*
 	}
 
 	return &result, nil
+}
+
+func GetSecret(ctx context.Context, logger *zap.Logger, name string) (string, error) {
+	resultChannel := make(chan secretValueDao, 1)
+	err := find(
+		ctx,
+		logger,
+		resultChannel,
+		func(s table.Session, tx *table.TransactionControl, c context.Context) (table.Transaction, result.Result, error) {
+			return s.Execute(c, tx,
+				`
+				DECLARE $id as Utf8;
+				SELECT * from home_secrets where name = $id;
+				`,
+				table.NewQueryParameters(
+					table.ValueParam("$id", types.UTF8Value(name)),
+				),
+			)
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	result, ok := <-resultChannel
+	if !ok {
+		return "", errors.New("cannot find id")
+	}
+	return result.Value, nil
 }
