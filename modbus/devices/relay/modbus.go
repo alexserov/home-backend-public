@@ -29,7 +29,7 @@ func (generic generic[V]) invokeGeneric(fast bool, action func(client modbus.Cli
 	// 	zap.Any("result err ptr", fmt.Sprintf("%p", &cErr)),
 	// )
 
-	queue.Enqueue(fast, generic.relay.slaveId, func (client modbus.Client)  {
+	go queue.Enqueue(fast, generic.relay.slaveId, func (client modbus.Client)  {
 		defer close(cResults)
 		defer close(cErr)
 
