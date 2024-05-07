@@ -127,7 +127,7 @@ func (q *queue) ProcessItems() Queue {
 	defer q.processingMutex.Unlock()
 	q.processing = true
 
-	for len(q.actionsFast) > 0 && len(q.actionsSlow) > 0 {
+	for len(q.actionsFast) > 0 || len(q.actionsSlow) > 0 {
 		q.processSingleActionsFast()
 		q.processSingleActionsSlow()
 	}
