@@ -44,7 +44,7 @@ func (manager *manager)initialize() {
 			select {
 			case <-manager.ticker.C:
 				manager.processActions()
-				if processed % 1000 == 0 {
+				if processed % 150 == 0 {
 					zap.L().Debug("Manager processed", zap.Uint64("count", processed))
 				}
 				processed++

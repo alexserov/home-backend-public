@@ -21,4 +21,5 @@ type queue struct {
 	actionsFast []queueAction
 	processing bool
 	processingMutex sync.Mutex
+	mutateActionsMutex sync.Mutex
 }

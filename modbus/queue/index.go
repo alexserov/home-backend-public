@@ -65,14 +65,44 @@ func (q *queue) Destroy() Queue {
 func (q *queue) Enqueue(fast bool, slaveId byte, item callback) Queue {
 	q.assertNotDestroyed()
 
+	q.appendLocked(fast, slaveId, item)
+
+	go q.ProcessItems()
+	return q
+}
+
+func (q *queue) appendLocked(fast bool, slaveId byte, item callback) {
+	q.mutateActionsMutex.Lock()
+	defer q.mutateActionsMutex.Unlock()
+
 	if fast {
 		q.actionsFast = append(q.actionsFast, queueAction{slaveId, item})
 	} else {
-	q.actionsSlow = append(q.actionsSlow, queueAction{slaveId, item})
-
+		q.actionsSlow = append(q.actionsSlow, queueAction{slaveId, item})
 	}
-	go q.ProcessItems()
-	return q
+}
+
+func (q *queue) processSingleActionsFast() {
+	if len(q.actionsFast) > 0 {
+		q.mutateActionsMutex.Lock()
+		defer q.mutateActionsMutex.Unlock()
+		meta := q.actionsFast[0]
+		q.actionsFast = q.actionsFast[1:]
+
+		q.clientHandler.SetSlave(meta.slaveId)
+		meta.action(q.client)
+	}
+}
+func (q *queue) processSingleActionsSlow() {
+	if len(q.actionsSlow) > 0 {
+		q.mutateActionsMutex.Lock()
+		defer q.mutateActionsMutex.Unlock()
+		meta := q.actionsSlow[0]
+		q.actionsSlow = q.actionsSlow[1:]
+
+		q.clientHandler.SetSlave(meta.slaveId)
+		meta.action(q.client)
+	}
 }
 
 func (q *queue) ProcessItems() Queue {
@@ -91,20 +121,12 @@ func (q *queue) ProcessItems() Queue {
 	}
 	defer q.processingMutex.Unlock()
 	q.processing = true
-	for len(q.actionsFast) > 0 {
-		meta := q.actionsFast[0]
-		q.actionsFast = q.actionsFast[1:]
 
-		q.clientHandler.SetSlave(meta.slaveId)
-		meta.action(q.client)
+	for len(q.actionsFast) > 0 && len(q.actionsSlow) > 0 {
+		q.processSingleActionsFast()
+		q.processSingleActionsSlow()
 	}
-	for len(q.actionsSlow) > 0 {
-		meta := q.actionsSlow[0]
-		q.actionsSlow = q.actionsSlow[1:]
 
-		q.clientHandler.SetSlave(meta.slaveId)
-		meta.action(q.client)
-	}
 	q.processing = false
 
 	return q
