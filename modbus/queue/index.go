@@ -71,14 +71,14 @@ func (q *queue) enqueueAsync(fast bool, slaveId byte, item callback) {
 func (q *queue) Enqueue(fast bool, slaveId byte, item callback) Queue {
 	q.assertNotDestroyed()
 
-	q.enqueueAsync(fast, slaveId, item)
+	go q.enqueueAsync(fast, slaveId, item)
 	
 	return q
 }
 
 func (q *queue) appendLocked(fast bool, slaveId byte, item callback) {
-	// q.mutateActionsMutex.Lock()
-	// defer q.mutateActionsMutex.Unlock()
+	q.mutateActionsMutex.Lock()
+	defer q.mutateActionsMutex.Unlock()
 
 	if fast {
 		q.actionsFast = append(q.actionsFast, queueAction{slaveId, item})
@@ -89,10 +89,10 @@ func (q *queue) appendLocked(fast bool, slaveId byte, item callback) {
 
 func (q *queue) processSingleActionsFast() {
 	if len(q.actionsFast) > 0 {
-		// q.mutateActionsMutex.Lock()
+		q.mutateActionsMutex.Lock()
 		meta := q.actionsFast[0]
 		q.actionsFast = q.actionsFast[1:]
-		// q.mutateActionsMutex.Unlock()
+		q.mutateActionsMutex.Unlock()
 
 		q.clientHandler.SetSlave(meta.slaveId)
 		meta.action(q.client)
@@ -100,10 +100,10 @@ func (q *queue) processSingleActionsFast() {
 }
 func (q *queue) processSingleActionsSlow() {
 	if len(q.actionsSlow) > 0 {
-		// q.mutateActionsMutex.Lock()
+		q.mutateActionsMutex.Lock()
 		meta := q.actionsSlow[0]
 		q.actionsSlow = q.actionsSlow[1:]
-		// q.mutateActionsMutex.Unlock()
+		q.mutateActionsMutex.Unlock()
 
 		q.clientHandler.SetSlave(meta.slaveId)
 		meta.action(q.client)
