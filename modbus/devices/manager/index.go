@@ -4,6 +4,8 @@ import (
 	"serov/home-backend-public/modbus/devices/device"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 var once sync.Once
@@ -36,13 +38,19 @@ func (manager *manager)initialize() {
 	manager.itemIdToItemMap = make(map[byte]device.Device)
 	manager.ticker = time.NewTicker(400 * time.Millisecond)
 	manager.disposeChannel = make (chan struct{})
+	var processed uint64 = 0 
 	go func () {
 		for {
 			select {
 			case <-manager.ticker.C:
 				manager.processActions()
+				if processed % 1000 == 0 {
+					zap.L().Debug("Manager processed", zap.Uint64("count", processed))
+				}
+				processed++
 			case <-manager.disposeChannel:
 				manager.ticker.Stop()
+				zap.L().Debug("!!!GOT MANAGER STOP COMMAND!!!")
 				manager.disposed = true
 			}
 		}
