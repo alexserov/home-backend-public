@@ -72,7 +72,7 @@ func (q *queue) Enqueue(fast bool, slaveId byte, item callback) Queue {
 	q.assertNotDestroyed()
 
 	go q.enqueueAsync(fast, slaveId, item)
-	
+
 	return q
 }
 
@@ -116,7 +116,7 @@ func (q *queue) ProcessItems() Queue {
 	if q.processing {
 		return q
 	}
-	
+
 	if !q.processingMutex.TryLock() {
 		zap.L().Debug("queue already locked")
 		return q
@@ -126,14 +126,14 @@ func (q *queue) ProcessItems() Queue {
 	}
 	defer q.processingMutex.Unlock()
 	q.processing = true
+	defer func(_q *queue) {
+		_q.processing = false
+	}(q)
 
 	for len(q.actionsFast) > 0 || len(q.actionsSlow) > 0 {
 		q.processSingleActionsFast()
 		q.processSingleActionsSlow()
 	}
 
-	q.processing = false
-
 	return q
-
 }
