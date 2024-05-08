@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"golang.org/x/tools/go/analysis/passes/nilfunc"
 )
 
 var relays = map[uint64]modbusrelay.Relay{}
@@ -23,6 +24,13 @@ func onRelayStateChanged(sender modbusrelay.Relay, args modbusrelay.StateChanged
 	userId := uint64(1)
 
 	zap.L().Debug("state changed", zap.Uint64("switch_id", id), zap.Any("state", args))
+
+	defer func() {
+		r := recover()
+		if r != nil {
+			zap.L().Warn("RECOVERED", zap.Any("recover result", r))
+		}
+	}()
 
 	for switchNum, switchValue := range args.New.Outputs {
 		if args.Old.Outputs[switchNum] != switchValue {
