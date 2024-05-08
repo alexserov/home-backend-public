@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"golang.org/x/tools/go/analysis/passes/nilfunc"
 )
 
 var relays = map[uint64]modbusrelay.Relay{}
