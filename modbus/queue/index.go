@@ -95,7 +95,7 @@ func (q *queue) processQueueActions(actions *[]queueAction) {
 			return
 		}
 		meta := (*actions)[0]
-		*actions = q.actionsFast[1:]
+		*actions = (*actions)[1:]
 		q.mutateActionsMutex.Unlock()
 
 		q.clientHandler.SetSlave(meta.slaveId)
