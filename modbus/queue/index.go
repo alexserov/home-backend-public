@@ -87,25 +87,15 @@ func (q *queue) appendLocked(fast bool, slaveId byte, item callback) {
 	}
 }
 
-func (q *queue) processSingleActionsFast() {
-	if len(q.actionsFast) > 0 {
-		zap.L().Debug("fast")
-		q.mutateActionsMutex.Lock()
-		meta := q.actionsFast[0]
-		q.actionsFast = q.actionsFast[1:]
-		q.mutateActionsMutex.Unlock()
-
-		q.clientHandler.SetSlave(meta.slaveId)
-		meta.action(q.client)
-	}
-}
-func (q *queue) processSingleActionsSlow() {
-	if len(q.actionsSlow) > 0 {
-		zap.L().Debug("slow")
-
-		q.mutateActionsMutex.Lock()
-		meta := q.actionsSlow[0]
-		q.actionsSlow = q.actionsSlow[1:]
+func (q *queue) processQueueActions(actions *[]queueAction) {
+	if len(*actions) > 0 {
+		zap.L().Debug("processing")
+		if !q.mutateActionsMutex.TryLock() {
+			zap.L().Debug("already locked")
+			return
+		}
+		meta := (*actions)[0]
+		*actions = q.actionsFast[1:]
 		q.mutateActionsMutex.Unlock()
 
 		q.clientHandler.SetSlave(meta.slaveId)
@@ -134,8 +124,8 @@ func (q *queue) ProcessItems() Queue {
 	}(q)
 
 	for len(q.actionsFast) > 0 || len(q.actionsSlow) > 0 {
-		q.processSingleActionsFast()
-		q.processSingleActionsSlow()
+		q.processQueueActions(&q.actionsFast)
+		q.processQueueActions(&q.actionsSlow)
 	}
 
 	return q
