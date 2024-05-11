@@ -89,6 +89,7 @@ func (q *queue) appendLocked(fast bool, slaveId byte, item callback) {
 
 func (q *queue) processSingleActionsFast() {
 	if len(q.actionsFast) > 0 {
+		zap.L().Debug("fast")
 		q.mutateActionsMutex.Lock()
 		meta := q.actionsFast[0]
 		q.actionsFast = q.actionsFast[1:]
@@ -100,6 +101,8 @@ func (q *queue) processSingleActionsFast() {
 }
 func (q *queue) processSingleActionsSlow() {
 	if len(q.actionsSlow) > 0 {
+		zap.L().Debug("slow")
+
 		q.mutateActionsMutex.Lock()
 		meta := q.actionsSlow[0]
 		q.actionsSlow = q.actionsSlow[1:]

@@ -59,6 +59,7 @@ func (manager *manager)initialize() {
 
 func (manager *manager)processActions() {
 	if manager.disposed {
+		zap.L().Error("Manager already disposed")
 		return
 	}
 
