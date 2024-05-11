@@ -11,3 +11,6 @@ refresh:
 	sudo service home-backend start
 logs:
 	sudo journalctl -u home-backend.service -f -n 100
+rl:
+	make refresh
+	make logs
