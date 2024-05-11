@@ -62,16 +62,13 @@ func (q *queue) Destroy() Queue {
 	return q
 }
 
-func (q *queue) enqueueAsync(fast bool, slaveId byte, item callback) {
+func (q *queue) Enqueue(fast bool, slaveId byte, item callback) Queue {
+	q.assertNotDestroyed()
+
 	q.assertNotDestroyed()
 
 	q.appendLocked(fast, slaveId, item)
 	go q.ProcessItems()
-}
-func (q *queue) Enqueue(fast bool, slaveId byte, item callback) Queue {
-	q.assertNotDestroyed()
-
-	go q.enqueueAsync(fast, slaveId, item)
 
 	return q
 }
