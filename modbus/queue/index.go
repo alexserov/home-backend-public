@@ -66,7 +66,7 @@ func (q *queue) enqueueAsync(fast bool, slaveId byte, item callback) {
 	q.assertNotDestroyed()
 
 	q.appendLocked(fast, slaveId, item)
-	q.ProcessItems()
+	go q.ProcessItems()
 }
 func (q *queue) Enqueue(fast bool, slaveId byte, item callback) Queue {
 	q.assertNotDestroyed()
