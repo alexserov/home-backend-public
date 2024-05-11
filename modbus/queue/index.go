@@ -87,11 +87,11 @@ func (q *queue) appendLocked(fast bool, slaveId byte, item callback) {
 	}
 }
 
-func (q *queue) processQueueActions(actions *[]queueAction) {
+func (q *queue) processQueueActions(actions *[]queueAction) bool {
 	if len(*actions) > 0 {
 		if !q.mutateActionsMutex.TryLock() {
 			zap.L().Debug("already locked")
-			return
+			return false
 		}
 		meta := (*actions)[0]
 		*actions = (*actions)[1:]
@@ -99,7 +99,9 @@ func (q *queue) processQueueActions(actions *[]queueAction) {
 
 		q.clientHandler.SetSlave(meta.slaveId)
 		meta.action(q.client)
+		return true
 	}
+	return false
 }
 
 func (q *queue) ProcessItems() Queue {
@@ -123,7 +125,9 @@ func (q *queue) ProcessItems() Queue {
 	}(q)
 
 	for len(q.actionsFast) > 0 || len(q.actionsSlow) > 0 {
-		q.processQueueActions(&q.actionsFast)
+		if q.processQueueActions(&q.actionsFast) {
+			continue
+		}
 		q.processQueueActions(&q.actionsSlow)
 	}
 
