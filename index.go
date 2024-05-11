@@ -16,26 +16,28 @@ import (
 
 var relays = map[uint64]modbusrelay.Relay{}
 var dialogId *string = nil
-var dialogsOauthKey * string = nil
+var dialogsOauthKey *string = nil
 
 func onRelayStateChanged(sender modbusrelay.Relay, args modbusrelay.StateChangedArgs) {
-	id := uint64(sender.Id())
-	userId := uint64(1)
+	go func(sender modbusrelay.Relay, args modbusrelay.StateChangedArgs) {
+		id := uint64(sender.Id())
+		userId := uint64(1)
 
-	zap.L().Debug("state changed", zap.Uint64("switch_id", id), zap.Any("state", args))
+		zap.L().Debug("state changed", zap.Uint64("switch_id", id), zap.Any("state", args))
 
-	defer func() {
-		r := recover()
-		if r != nil {
-			zap.L().Warn("RECOVERED", zap.Any("recover result", r))
+		defer func() {
+			r := recover()
+			if r != nil {
+				zap.L().Warn("RECOVERED", zap.Any("recover result", r))
+			}
+		}()
+
+		for switchNum, switchValue := range args.New.Outputs {
+			if args.Old.Outputs[switchNum] != switchValue {
+				updateRelaySwitchDb(userId, id, switchNum, switchValue)
+			}
 		}
-	}()
-
-	for switchNum, switchValue := range args.New.Outputs {
-		if args.Old.Outputs[switchNum] != switchValue {
-			updateRelaySwitchDb(userId, id, switchNum, switchValue)
-		}
-	}
+	}(sender, args)
 }
 
 func updateRelaySwitchDb(userId uint64, relayId uint64, switchNum int, switchValue bool) {
