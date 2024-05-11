@@ -136,7 +136,10 @@ func (relay *relay) Refresh() {
 }
 
 func (relay *relay)Set(index byte, value bool) error { 
+	zap.L().Debug("MODBUS: set enqueued", zap.Any("slave id", relay.slaveId), zap.Any("index", index), zap.Bool("value", value))
 	_, err := generic[bool]{relay}.invokeGeneric(true, func(client modbus.Client) (bool, error) {
+		zap.L().Debug("MODBUS: set invoked", zap.Any("slave id", relay.slaveId), zap.Any("index", index), zap.Bool("value", value))
+		defer zap.L().Debug("MODBUS: set completed", zap.Any("slave id", relay.slaveId), zap.Any("index", index), zap.Bool("value", value))
 		if value {
 			_, err := client.WriteSingleCoil(uint16(index), 0xff00)
 			return true, err
