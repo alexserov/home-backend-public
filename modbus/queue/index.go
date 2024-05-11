@@ -89,7 +89,6 @@ func (q *queue) appendLocked(fast bool, slaveId byte, item callback) {
 
 func (q *queue) processQueueActions(actions *[]queueAction) {
 	if len(*actions) > 0 {
-		zap.L().Debug("processing")
 		if !q.mutateActionsMutex.TryLock() {
 			zap.L().Debug("already locked")
 			return
