@@ -150,7 +150,7 @@ func fetchAndProcessCommands() {
 }
 
 func listenCommands() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(4 * time.Second)
 	go func() {
 		for {
 			select {
