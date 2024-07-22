@@ -113,6 +113,10 @@ func fetchAndProcessCommands() {
 		zap.L().Error("unable to fetch commands", zap.Error(err))
 	}
 
+	if len(*commands) > 0 {
+		zap.L().Debug("commands pending", zap.Int("length", len(*commands)))
+	}
+
 	for _, command := range *commands {
 		go func(cmd *dataaccess.HomeDeviceTasksDao) {
 			zap.L().Debug("got command", zap.Any("command", cmd))
