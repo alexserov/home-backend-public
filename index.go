@@ -118,7 +118,7 @@ func fetchAndProcessCommands() {
 	}
 
 	for _, command := range *commands {
-		go func(cmd *dataaccess.HomeDeviceTasksDao) {
+		go func(cmd dataaccess.HomeDeviceTasksDao) {
 			zap.L().Debug("got command", zap.Any("command", cmd))
 			dataaccess.DeleteCommand(context.Background(), zap.L(), cmd.Id)
 
@@ -148,7 +148,7 @@ func fetchAndProcessCommands() {
 
 			zap.L().Debug("new value", zap.Any("relay id", relayItem.Id()), zap.Any("switch", device.SwitchId), zap.Any("value", newValue))
 			relayItem.Set(byte(device.SwitchId-1), newValue)
-		}(&command)
+		}(command)
 
 	}
 }
