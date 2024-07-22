@@ -114,7 +114,7 @@ func fetchAndProcessCommands() {
 	}
 
 	if len(*commands) > 0 {
-		zap.L().Debug("commands pending", zap.Int("length", len(*commands)))
+		zap.L().Debug("commands pending", zap.Int("length", len(*commands)), zap.Any("all commands", *commands))
 	}
 
 	for _, command := range *commands {
