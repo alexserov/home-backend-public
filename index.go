@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -154,7 +155,7 @@ func fetchAndProcessCommands() {
 }
 
 func listenCommands() {
-	ticker := time.NewTicker(4 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	go func() {
 		for {
 			select {
@@ -207,6 +208,15 @@ func getSecrets() {
 	dialogsOauthKey = &dialogsOauthKeyLocal
 }
 
+func runApiServer() {
+	router := gin.Default()
+	router.POST("/execute", func(c *gin.Context) {
+		go fetchAndProcessCommands()
+	})
+
+	router.Run(":30641")
+}
+
 func main() {
 	config := zap.NewProductionConfig()
 	config.DisableCaller = true
@@ -223,6 +233,8 @@ func main() {
 
 	initializeRelays()
 	listenCommands()
+
+	runApiServer()
 
 	select {}
 }
