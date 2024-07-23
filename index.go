@@ -108,6 +108,38 @@ func initializeRelays() {
 	initializeRelay(53)
 }
 
+func processSingleCommand(cmd dataaccess.HomeDeviceTasksDao) {
+	zap.L().Debug("got command", zap.Any("command", cmd))
+	dataaccess.DeleteCommand(context.Background(), zap.L(), cmd.Id)
+
+	device, err := dataaccess.GetDeviceByUid(context.Background(), zap.L(), cmd.DeviceId)
+
+	if err != nil {
+		zap.L().Error("unable to fetch device for command (got error)", zap.Error(err), zap.Any("command", cmd))
+	}
+	if device == nil {
+		zap.L().Error("unable to fetch device for command", zap.Any("command", cmd))
+		return
+	}
+
+	relayItem := relays[device.RelayId]
+
+	if relayItem == nil {
+		zap.L().Error("no relay for device found", zap.Any("device", device))
+		return
+	}
+
+	newValue, err := strconv.ParseBool(cmd.Value)
+
+	if err != nil {
+		zap.L().Error("value is not bool", zap.Any("command", cmd))
+		return
+	}
+
+	zap.L().Debug("new value", zap.Any("relay id", relayItem.Id()), zap.Any("switch", device.SwitchId), zap.Any("value", newValue))
+	relayItem.Set(byte(device.SwitchId-1), newValue)
+}
+
 func fetchAndProcessCommands() {
 	commands, err := dataaccess.ListCommandsForUser(context.Background(), zap.L(), 1)
 	if err != nil {
@@ -119,37 +151,7 @@ func fetchAndProcessCommands() {
 	}
 
 	for _, command := range *commands {
-		go func(cmd dataaccess.HomeDeviceTasksDao) {
-			zap.L().Debug("got command", zap.Any("command", cmd))
-			dataaccess.DeleteCommand(context.Background(), zap.L(), cmd.Id)
-
-			device, err := dataaccess.GetDeviceByUid(context.Background(), zap.L(), cmd.DeviceId)
-
-			if err != nil {
-				zap.L().Error("unable to fetch device for command (got error)", zap.Error(err), zap.Any("command", cmd))
-			}
-			if device == nil {
-				zap.L().Error("unable to fetch device for command", zap.Any("command", cmd))
-				return
-			}
-
-			relayItem := relays[device.RelayId]
-
-			if relayItem == nil {
-				zap.L().Error("no relay for device found", zap.Any("device", device))
-				return
-			}
-
-			newValue, err := strconv.ParseBool(cmd.Value)
-
-			if err != nil {
-				zap.L().Error("value is not bool", zap.Any("command", cmd))
-				return
-			}
-
-			zap.L().Debug("new value", zap.Any("relay id", relayItem.Id()), zap.Any("switch", device.SwitchId), zap.Any("value", newValue))
-			relayItem.Set(byte(device.SwitchId-1), newValue)
-		}(command)
+		go processSingleCommand(command)
 
 	}
 }
@@ -211,7 +213,25 @@ func getSecrets() {
 func runApiServer() {
 	router := gin.Default()
 	router.POST("/execute", func(c *gin.Context) {
-		go fetchAndProcessCommands()
+		var payload struct {
+			CommandId uint64 `json:"commandId"`
+		}
+
+		err := c.BindJSON(&payload)
+
+		if err != nil {
+			zap.L().Error("execute - unable to bind json", zap.Error(err))
+		}
+
+		command, err := dataaccess.GetCommandsForUserById(context.Background(), zap.L(), 1, payload.CommandId)
+
+		if err != nil {
+			zap.L().Error("execute - unable to get command by id", zap.Error(err))
+		} else if command != nil && command.Id == payload.CommandId {
+			go processSingleCommand(*command);
+		} else {
+			zap.L().Error("got no error but command was not found in db")
+		}
 	})
 
 	router.Run(":30641")

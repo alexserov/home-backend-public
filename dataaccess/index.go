@@ -260,6 +260,36 @@ func DeleteCommand(ctx context.Context, logger *zap.Logger, id uint64) error {
 	return nil
 }
 
+func GetCommandsForUserById(ctx context.Context, logger *zap.Logger, uid uint64, cid uint64) (*HomeDeviceTasksDao, error) {
+	resultChannel := make(chan HomeDeviceTasksDao, 1)
+	go find(
+		ctx,
+		logger,
+		resultChannel,
+		func(s table.Session, tx *table.TransactionControl, c context.Context) (table.Transaction, result.Result, error) {
+			return s.Execute(c, tx,
+				`
+				DECLARE $uid as Uint64;
+				DECLARE $cid as Uint64;
+				SELECT * from home_device_tasks where user_id = $uid and id = $cid;
+				`,
+				table.NewQueryParameters(
+					table.ValueParam("$uid", types.Uint64Value(uid)),
+					table.ValueParam("$cid", types.Uint64Value(cid)),
+
+				),
+			)
+		},
+	)
+
+	result, ok := <-resultChannel
+	if !ok {
+		return nil, errors.New("cannot find id")
+	}
+
+	return &result, nil
+}
+
 func ListCommandsForUser(ctx context.Context, logger *zap.Logger, uid uint64) (*[]HomeDeviceTasksDao, error) {
 	resultChannel := make(chan HomeDeviceTasksDao)
 	go find(
