@@ -8,6 +8,8 @@ type State struct {
 	Outputs Outputs
 	Inputs Inputs
 	Clicks Counters
+	ShortClicks Counters
+	LongClicks Counters
 }
 
 type StateChangedArgs struct {

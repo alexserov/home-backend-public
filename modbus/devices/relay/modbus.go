@@ -114,15 +114,22 @@ func (relay *relay) Refresh() {
 			result.Inputs[0] = inputs[0] & (1 << 7) > 0
 		}
 
-		clicks, clicksErr := cl.ReadInputRegisters(32, 8)
-		uClicks := make([]uint16, 8)
-		binary.Read(bytes.NewReader(clicks), binary.BigEndian, uClicks)
-		if clicksErr == nil {
-			for i, val := range uClicks[:5] {
-				result.Clicks[i+1] = val
+
+		updateClicks := func(field *Counters, address uint16) {
+			clicks, clicksErr := cl.ReadInputRegisters(address, 8)
+			uClicks := make([]uint16, 8)
+			binary.Read(bytes.NewReader(clicks), binary.BigEndian, uClicks)
+			if clicksErr == nil {
+				for i, val := range uClicks[:5] {
+					field[i+1] = val
+				}
+				field[0] = uClicks[7]
 			}
-			result.Clicks[0] = uClicks[7]
 		}
+
+		updateClicks(&result.Clicks, 0x20);
+		updateClicks(&result.ShortClicks, 0x01D0);
+		updateClicks(&result.LongClicks, 0x01E0);
 
 		return result, nil
 	})
