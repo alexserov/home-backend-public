@@ -33,12 +33,24 @@ func onRelayStateChanged(sender modbusrelay.Relay, args modbusrelay.StateChanged
 			}
 		}()
 
-		if sender.Id() == 52 && args.New.Clicks[0] > args.Old.Clicks[0] {
-			relays[243].SetAll([6]bool{false, false, false, false, false, false})
-			relays[61].SetAll([6]bool{false, false, false, false, false, false})
-			relays[52].Set(0, false)
+		if sender.Id() == 52 {
+			state := 0
+			if args.New.ShortClicks[0] > args.Old.ShortClicks[0] {
+				state = 1
+			}
+			if args.New.LongClicks[0] > args.Old.LongClicks[0] {
+				state = 2
+			}
 
-
+			if state != 0 {
+				value := false
+				if state == 2 {
+					value = true
+				}
+				relays[243].SetAll([6]bool{value, value, value, value, value, value})
+				relays[61].SetAll([6]bool{value, value, value, value, value, value})
+				relays[52].Set(0, value)
+			}
 		}
 
 		for switchNum, switchValue := range args.New.Outputs {
