@@ -36,7 +36,7 @@ func onRelayStateChanged(sender modbusrelay.Relay, args modbusrelay.StateChanged
 		if sender.Id() == 52 && args.New.Clicks[0] > args.Old.Clicks[0] {
 			relays[243].SetAll([6]bool{false, false, false, false, false, false})
 			relays[61].SetAll([6]bool{false, false, false, false, false, false})
-			relays[52].Set(1, false)
+			relays[52].Set(0, false)
 
 
 		}
